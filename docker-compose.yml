@@ -1,0 +1,68 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  backend-service:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./db:/app/data
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=file:./data/dev.db
+      - JWT_PASS="!TRADEDECK!@2025%*&"
+      - MAIN_PORT=3000
+      - CACHE_PORT=6379
+      - MARKET_DATA_URL="https://trading.bigul.co/apimarketdata"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  core-services:
+    build: ./core
+    depends_on:
+      redis:
+        condition: service_started
+      backend-service:
+        condition: service_healthy
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JWT_PASS="!TRADEDECK!@2025%*&"
+    volumes:
+      - ./python-services:/app
+
+  core-stream-service:
+    build: ./livePrice
+    ports:
+      - "3001:3001"
+    depends_on:
+      redis:
+        condition: service_started
+      backend-service:
+        condition: service_healthy
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JWT_PASS="!TRADEDECK!@2025%*&"
+      - URL="https://trading.bigul.co/apimarketdata"
+      - CORE_PORT="3001"
+
+  stream-service-fe:
+    build: ./price-data-fe
+    ports:
+      - "3002:3002"
+    depends_on:
+      redis:
+        condition: service_started
+      backend-service:
+        condition: service_healthy
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JWT_PASS="!TRADEDECK!@2025%*&"
+      - URL="https://trading.bigul.co/apimarketdata"
+      - FE_PORT="3002"

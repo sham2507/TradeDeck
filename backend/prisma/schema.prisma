@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // provider = "sqlite"
+  provider = "postgresql"
+  url=env("DATABASE_URL")
+  // url      = "file:./../db/prod.db"
+}
+
+model User {
+  id                              String              @id  @default(uuid())
+  credentials                     String
+  password                        String
+  reset                           Boolean
+  credential                      Credentials[]
+}
+
+model Instance{
+  id                              String              @id @default(uuid())
+  indexName                       String
+  expiry                          String
+  ltpRange                        Int
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  isDummy                         Boolean             @default(false)
+  isDeleted                       Boolean             @default(false)
+  tradeDetails                    TradeDetails[]      @relation("InstanceToTradeDetails")
+}
+
+model TradeDetails {
+  id                              String              @id
+  humanId                         String
+  legCount                        Int
+  qty                             Int
+  currentQty                      Int
+  entrySide                       Side                @default(UNDEFINED)
+  entryType                       Entry               @default(UNDEFINED)
+  entryPrice                      Float
+  stopLossPoints                  Float
+  takeProfitPoints                Float
+  stopLossPremium                 Float
+  takeProfitPremium               Float
+  entrySpotPrice                  Float
+  lastPointOfAdjustment           Int
+  pointOfAdjustment               Int
+  pointOfAdjustmentLowerLimit     Int
+  pointOfAdjustmentUpperLimit     Int
+  entryTriggered                  Boolean             @default(false)
+  slTriggered                     Boolean             @default(false)
+  tpTriggered                     Boolean             @default(false)
+  strategySl                      Float               @default(0)
+  strategyTrailing                Float               @default(0)
+  reason                          String              @default("")
+  userExit                        Int                 @default(0)
+  alive                           Boolean             @default(true)
+  isDeleted                       Boolean             @default(false)
+  isDummy                         Boolean             @default(false)
+  createdBy                       String
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  liveTradePositions              LiveTradePosition[]
+  hedge                           Hedge[]
+  instanceId                      String
+  instance                        Instance            @relation("InstanceToTradeDetails", fields: [instanceId], references: [id])
+}
+
+model LiveTradePosition {
+  id                              String              @id @default(uuid())
+  optionName                      String
+  initialQty                      String
+  currentQty                      String
+  entryAppOrderId                 Int
+  exitAppOrderId                  Int
+  entryPrice                      Float
+  closePrice                      Float               @default(0)
+  exchangeId                      String
+  tradeDetailsId                  String
+  closed                          Boolean             @default(false)
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  tradeDetails                    TradeDetails        @relation(fields: [tradeDetailsId], references: [id])
+}
+
+model Credentials {
+  id                              String              @id @default(uuid())
+  keyName                         String              @unique
+  apiKey                          String
+  apiSecret                       String
+  userId                          String
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  userDetails                     User                @relation(fields: [userId],references: [id] )
+}
+
+model Hedge {
+  id                              String              @id @default(uuid())
+  optionDirection                 OptionDirection     @default(UNDEFINED)
+  expiry                          String
+  multiplier                      Float
+  premium                         Float
+  strike                          String
+  active                          Boolean             @default(false)
+  closed                          Boolean             @default(false)
+  Reason                          String
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  tradeDetailsId                  String
+  tradeDetails                    TradeDetails        @relation(fields: [tradeDetailsId],references: [id])
+}
+
+model PortfolioSettings {
+  id                              String              @id @default(uuid())
+  targetAmount                    Float               @default(0.0)
+  stopLossAmount                  Float               @default(0.0)
+  stopLossTrailing                Float               @default(0.0)
+  isEnabled                       Boolean             @default(false)
+}
+
+model Symbol {
+  id              String                            @default(uuid()) @unique
+  symbolName      String                            @unique
+  type            SymbolType
+  createdAt       DateTime                          @default(now())
+  updatedAt       DateTime
+  historicalData  HistoricalData[]
+}
+
+
+model HistoricalData {
+  id          String                                @default(uuid()) @unique
+  symbolId    String
+  date        DateTime
+  open        Decimal
+  high        Decimal
+  low         Decimal
+  close       Decimal
+  volume      Decimal
+  symbol      Symbol    @relation(fields: [symbolId],references: [id])
+  @@unique([symbolId, date])
+}
+
+enum SymbolType {
+  INDEX
+  OPTION
+}
+
+
+enum Entry {
+  LIMIT
+  MARKET
+  UNDEFINED
+}
+
+enum Side {
+  SELL
+  BUY
+  UNDEFINED
+}
+
+enum OptionDirection {
+  CALL
+  PUT
+  UNDEFINED
+}

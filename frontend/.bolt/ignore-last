@@ -1,0 +1,10 @@
+src/config/*
+src/data/*
+src/pages/*
+src/utils/*
+src/components/core/*
+src/components/draggable/*
+src/components/modals/*
+src/components/PositionTracker/*
+src/components/TradeTable/*
+src/components/wss/*
